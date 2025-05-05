@@ -83,6 +83,13 @@ pipeline {
                     }
                 }
             }
+            post {
+                success {
+                    script {
+                        sh "docker rmi $IMAGE_NAME"
+                    }
+                }
+            }
         }
     }
 }
