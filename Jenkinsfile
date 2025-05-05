@@ -94,7 +94,7 @@ pipeline {
         stage('Deploy to EC2 instance') {
             steps {
                 script {
-                    withAWS(credentialsId: 'aws-credentials',region: 'us-east-1') {
+                    withAWS(credentials: 'aws-credentials',region: 'us-east-1') {
                         sh "aws ec2 describe-instances --filters Name=instance-state-name,Values=running --query \"Reservations[*].Instances[*].PublicDnsName\" --output text > public_dns.txt"
                     }
                     EC2_IP = readfile('public_dns.txt').trim()
