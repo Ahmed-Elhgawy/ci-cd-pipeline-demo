@@ -104,7 +104,7 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP '
                                 echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
                                 export IMAGE_NAME=$IMAGE_NAME
-                                export MONGO_USER=$MONGO_USER
+                                export MONGO_USER="admin"
                                 export MONGO_PASS=$MONGO_PASS
                                 export MONGO_DB=$MONGO_DB
                                 docker pull $IMAGE_NAME
