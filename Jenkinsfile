@@ -10,8 +10,7 @@ pipeline {
         MONGO_PASS="admin"
         MONGO_DB="app"
         MONGO_HOST="localhost"
-        DOCKER_CREDS=credemtials('docker-hub')
-        IMAGE_NAME="$DOCKER_CREDS_USR/todo-app:$BUILD_TAG"
+        DOCKER_CREDS=credentials('docker-hub')
     }
 
     stages {
@@ -43,8 +42,8 @@ pipeline {
                     // Run MongoDB as a docker For Test Environment
                     sh """
                         docker run -d -p 27017:27017 --name mongodb-test \
-                        -e MONGO_INITDB_ROOT_USERNAME=$MONGOUSER \
-                        -e MONGO_INITDB_ROOT_PASSWORD=$MONGOPASS \
+                        -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER \
+                        -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS \
                         -e MONGO_INITDB_DATABASE=$MONGO_DB \
                         mongo:latest
                     """
@@ -77,6 +76,7 @@ pipeline {
         stage('push to Docker Hub') {
             steps {
                 script {
+                    IMAGE_NAME="$DOCKER_CREDS_USR/todo-app:$BUILD_TAG"
                     sh "docker tag todo-app:latest $IMAGE_NAME"
                     withDockerRegistry(credentialsId: 'docker-hub', url: 'https://index.docker.io/v1/') {
                         sh "docker push $IMAGE_NAME"
