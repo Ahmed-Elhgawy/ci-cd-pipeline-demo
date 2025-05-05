@@ -91,5 +91,29 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to EC2 instance') {
+            steps {
+                script {
+                    withAWS(credentialsId: 'aws-credentials',region: 'us-east-1') {
+                        sh "aws ec2 describe-instances --filters Name=instance-state-name,Values=running --query \"Reservations[*].Instances[*].PublicDnsName\" --output text > public_dns.txt"
+                    }
+                    EC2_IP = readfile('public_dns.txt').trim()
+                    sshagent(['devops-linux-private-key']) {
+                        sh '''
+                            scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@$EC2_IP:/home/ec2-user/docker-compose.yml
+                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP "
+                                echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
+                                docker pull $IMAGE_NAME
+                                export IMAGE_NAME=$IMAGE_NAME
+                                export MONGO_USER=$MONGO_USER
+                                export MONGO_PASS=$MONGO_PASS
+                                export MONGO_DB=$MONGO_DB
+                                envsubst docker-compose.yml | docker-compose -f - up -d
+                            "
+                        '''
+                    }
+                }
+            }
+        }
     }
 }
