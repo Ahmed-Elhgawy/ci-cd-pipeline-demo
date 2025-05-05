@@ -97,9 +97,9 @@ pipeline {
                     withAWS(credentials: 'aws-credentials',region: 'us-east-1') {
                         sh "aws ec2 describe-instances --filters Name=instance-state-name,Values=running --query \"Reservations[*].Instances[*].PublicDnsName\" --output text > public_dns.txt"
                     }
-                    EC2_IP = readFile('public_dns.txt').trim()
                     sshagent(['devops-linux-private-key']) {
                         sh '''
+                            EC2_IP=$(cat public_dns.txt)
                             scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@$EC2_IP:/home/ec2-user/docker-compose.yml
                             ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP "
                                 echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
