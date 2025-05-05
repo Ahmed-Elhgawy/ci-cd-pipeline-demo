@@ -6,8 +6,8 @@ pipeline {
     }
 
     environment {
-        MONGO_USER="admin"
-        MONGO_PASS="admin"
+        MONGO_USER=credentials('mongo_username')
+        MONGO_PASS=credentials('mongo-password')
         MONGO_DB="app"
         MONGO_HOST="localhost"
         DOCKER_CREDS=credentials('docker-hub')
