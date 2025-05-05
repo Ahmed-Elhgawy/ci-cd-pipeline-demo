@@ -99,9 +99,9 @@ pipeline {
                     }
                     def EC2_IP=readFile('public_dns.txt').trim()
                     sshagent(['devops-linux-private-key']) {
-                        sh '''
+                        sh """
                             scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@$EC2_IP:/home/ec2-user/docker-compose.yml
-                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP "
+                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP '
                                 echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
                                 export IMAGE_NAME=$IMAGE_NAME
                                 export MONGO_USER=$MONGO_USER
@@ -109,8 +109,8 @@ pipeline {
                                 export MONGO_DB=$MONGO_DB
                                 docker pull $IMAGE_NAME
                                 envsubst < docker-compose.yml | docker-compose -f - up -d
-                            "
-                        '''
+                            '
+                        """
                     }
                 }
             }
