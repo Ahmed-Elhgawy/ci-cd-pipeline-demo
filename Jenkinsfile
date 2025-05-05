@@ -58,12 +58,12 @@ pipeline {
                     """
                 }
             }
-        }
-        post {
-            always {
-                script {
-                    // Stop and remove the MongoDB test container
-                    sh "docker stop mongodb-test && docker rm mongodb-test"
+            post {
+                always {
+                    script {
+                        // Stop and remove the MongoDB test container
+                        sh "docker stop mongodb-test && docker rm mongodb-test"
+                    }
                 }
             }
         }
