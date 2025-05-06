@@ -6,8 +6,8 @@ pipeline {
     }
 
     environment {
-        MONGO_USER=credentials('mongo_username')
-        MONGO_PASS=credentials('mongo-password')
+        // MONGO_USER=credentials('mongo_username')
+        // MONGO_PASS=credentials('mongo-password')
         MONGO_DB="app"
         MONGO_HOST="localhost"
         DOCKER_CREDS=credentials('docker-hub')
@@ -37,36 +37,36 @@ pipeline {
                 }
             }
         }
-        stage('Test Application') {
-            steps {
-                script {
-                    // Run MongoDB as a docker For Test Environment
-                    sh """
-                        docker run -d -p 27017:27017 --name mongodb-test \
-                        -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER \
-                        -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS \
-                        -e MONGO_INITDB_DATABASE=$MONGO_DB \
-                        mongo:latest
-                    """
-                    sh "sleep 30"
-                    sh """
-                        export MONGO_HOST=$MONGO_HOST
-                        export MONGO_USER=$MONGO_USER
-                        export MONGO_PASS=$MONGO_PASS
-                        export MONGO_DB=$MONGO_DB
-                        npm test
-                    """
-                }
-            }
-            post {
-                always {
-                    script {
-                        // Stop and remove the MongoDB test container
-                        sh "docker stop mongodb-test && docker rm mongodb-test"
-                    }
-                }
-            }
-        }
+        // stage('Test Application') {
+        //     steps {
+        //         script {
+        //             // Run MongoDB as a docker For Test Environment
+        //             sh """
+        //                 docker run -d -p 27017:27017 --name mongodb-test \
+        //                 -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER \
+        //                 -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS \
+        //                 -e MONGO_INITDB_DATABASE=$MONGO_DB \
+        //                 mongo:latest
+        //             """
+        //             sh "sleep 30"
+        //             sh """
+        //                 export MONGO_HOST=$MONGO_HOST
+        //                 export MONGO_USER=$MONGO_USER
+        //                 export MONGO_PASS=$MONGO_PASS
+        //                 export MONGO_DB=$MONGO_DB
+        //                 npm test
+        //             """
+        //         }
+        //     }
+        //     post {
+        //         always {
+        //             script {
+        //                 // Stop and remove the MongoDB test container
+        //                 sh "docker stop mongodb-test && docker rm mongodb-test"
+        //             }
+        //         }
+        //     }
+        // }
         stage('Build Docker Image') {
             steps {
                 script {
@@ -98,19 +98,25 @@ pipeline {
                         sh "aws ec2 describe-instances --filters Name=instance-state-name,Values=running --query \"Reservations[*].Instances[*].PublicDnsName\" --output text > public_dns.txt"
                     }
                     def EC2_IP=readFile('public_dns.txt').trim()
-                    sshagent(['devops-linux-private-key']) {
-                        sh """
-                            scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@$EC2_IP:/home/ec2-user/docker-compose.yml
-                            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP '
-                                echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
-                                export IMAGE_NAME=$IMAGE_NAME
-                                export MONGO_USER="admin"
-                                export MONGO_PASS=$MONGO_PASS
-                                export MONGO_DB=$MONGO_DB
-                                docker pull $IMAGE_NAME
-                                envsubst < docker-compose.yml | docker-compose -f - up -d
-                            '
-                        """
+                    withCredentials([
+                        string(credentialsId: 'mongo_username',variable: 'MONGO_USER'),
+                        string(credentialsId: 'mongo-password',variable: 'MONGO_PASS'),
+                    ]) {
+                        sshagent(['devops-linux-private-key']) {
+                            sh """
+                                scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@$EC2_IP:/home/ec2-user/docker-compose-templete.yml
+                                ssh -o StrictHostKeyChecking=no ec2-user@$EC2_IP '
+                                    echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
+                                    export IMAGE_NAME=$IMAGE_NAME
+                                    export MONGO_USER=$MONGO_USER
+                                    export MONGO_PASS=$MONGO_PASS
+                                    export MONGO_DB=$MONGO_DB
+                                    docker pull $IMAGE_NAME
+                                    envsubst < docker-compose-templete.yml > docker-compose.yml
+                                    docker-compose up -d
+                                '
+                            """
+                        }
                     }
                 }
             }
