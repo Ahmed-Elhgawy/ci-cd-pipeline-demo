@@ -6,10 +6,7 @@ pipeline {
     }
 
     environment {
-        // MONGO_USER=credentials('mongo_username')
-        // MONGO_PASS=credentials('mongo-password')
         MONGO_DB="app"
-        MONGO_HOST="localhost"
         DOCKER_CREDS=credentials('docker-hub')
         IMAGE_NAME="$DOCKER_CREDS_USR/todo-app:$BUILD_TAG"
     }
@@ -37,36 +34,41 @@ pipeline {
                 }
             }
         }
-        // stage('Test Application') {
-        //     steps {
-        //         script {
-        //             // Run MongoDB as a docker For Test Environment
-        //             sh """
-        //                 docker run -d -p 27017:27017 --name mongodb-test \
-        //                 -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER \
-        //                 -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS \
-        //                 -e MONGO_INITDB_DATABASE=$MONGO_DB \
-        //                 mongo:latest
-        //             """
-        //             sh "sleep 30"
-        //             sh """
-        //                 export MONGO_HOST=$MONGO_HOST
-        //                 export MONGO_USER=$MONGO_USER
-        //                 export MONGO_PASS=$MONGO_PASS
-        //                 export MONGO_DB=$MONGO_DB
-        //                 npm test
-        //             """
-        //         }
-        //     }
-        //     post {
-        //         always {
-        //             script {
-        //                 // Stop and remove the MongoDB test container
-        //                 sh "docker stop mongodb-test && docker rm mongodb-test"
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Testing') {
+            steps {
+                script {
+                    // Run MongoDB as a docker For Test Environment
+                    withCredentials([
+                        string(credentialsId: 'mongo_username',variable: 'MONGO_USER'),
+                        string(credentialsId: 'mongo-password',variable: 'MONGO_PASS'),
+                    ]) {
+                        sh """
+                            docker run -d -p 27017:27017 --name mongodb-test \
+                            -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER \
+                            -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS \
+                            -e MONGO_INITDB_DATABASE=$MONGO_DB \
+                            mongo:latest
+                        """
+                        sh "sleep 30"
+                        sh """
+                            export MONGO_HOST=localhost
+                            export MONGO_USER=$MONGO_USER
+                            export MONGO_PASS=$MONGO_PASS
+                            export MONGO_DB=$MONGO_DB
+                            npm test
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    script {
+                        // Stop and remove the MongoDB test container
+                        sh "docker stop mongodb-test && docker rm mongodb-test"
+                    }
+                }
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 script {
